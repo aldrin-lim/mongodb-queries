@@ -1,0 +1,51 @@
+/**
+ * Renaming field for 3 deep levels nested array in mongo
+ */
+
+// Example:
+// collection: {
+//   rootField1: [
+//     child1: [
+//       child2: []
+//     ]
+//   ]
+// }
+
+db.collection.update(
+  { "parent.child1.child2": { $exists: true } },
+  [
+    {
+      $set: {
+        rootField1: {
+          $map: {
+            input: "$rootField1",
+            in: {
+              $mergeObjects: [
+                "$$this",
+                {
+                  child1: {
+                    $map: {
+                      input: "$$this.child1",
+                      in: {
+                        $mergeObjects: [
+                          "$$this",
+                          {
+                            newField: "$$this.previousField",
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+    {
+      $unset: ["child1.child2.previousField"],
+    },
+  ],
+  { multi: true }
+);
